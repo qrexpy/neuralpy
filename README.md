@@ -1,98 +1,59 @@
 # neural.py
 
-A simple neural network implementation in Python that can be used as a module. This implementation includes forward and backward propagation, with support for multiple layers and mini-batch training.
+A neural network implementation built entirely from scratch in Python, with no dependencies on deep learning frameworks. This project demonstrates the fundamental principles of neural networks by implementing all mathematical operations and algorithms manually.
 
 ## Features
 
-- Multi-layer neural network
-- Multiple activation functions:
-  - Sigmoid (default)
-  - ReLU (Rectified Linear Unit)
-  - Leaky ReLU
-- He/Xavier initialization based on activation function
-- Mini-batch training support
-- Mean squared error loss function
-- Gradient descent optimization
-- Visualization tools for:
-  - Training progress
-  - Network architecture
-  - Decision boundaries
-  - Weight distributions
-  - Confusion matrices
+- **Pure Python Implementation**: All mathematical operations implemented from scratch
+- **Multiple Activation Functions**: Sigmoid, ReLU, and Leaky ReLU
+- **Custom Matrix Operations**: Efficient matrix multiplication, addition, and more
+- **Mathematical Functions**: Taylor series for exponential, Newton's method for square root
+- **Random Number Generation**: Linear congruential generator
+- **Visualization Tools**: Network architecture, training progress, and more
+- **Comprehensive Tests**: XOR problem and digit recognition examples
+
+> [!NOTE]
+> The NumPy implementation (`neural.py`) is 15-100x faster than the pure Python implementation (`pure_neural.py`) according to benchmark tests. The pure implementation is provided for educational purposes to understand the underlying mathematics.
+
+## Installation
+
+```bash
+git clone https://github.com/yourusername/neural.py.git
+cd neural.py
+pip install -r requirements.txt
+```
+
+## Usage
+
+```python
+from src.pure_neural import PureNeuralNetwork
+
+# Create a neural network with 2 input neurons, 4 hidden neurons, and 1 output neuron
+nn = PureNeuralNetwork([2, 4, 1], learning_rate=0.1)
+
+# Train the network
+X = [[0, 0], [0, 1], [1, 0], [1, 1]]  # Input data
+y = [[0], [1], [1], [0]]              # Target data
+losses = nn.train(X, y, epochs=10000)
+
+# Make predictions
+predictions = nn.predict(X)
+```
 
 ## Project Structure
 
 ```
 .
 ├── src/
-│   ├── neural.py               # Main neural network implementation
-│   └── visualization.py        # Visualization tools
+│   ├── neural.py         # Main neural network implementation
+│   ├── pure_neural.py    # Pure implementation without NumPy
+│   ├── math_ops.py       # Mathematical operations from scratch
+│   └── visualization.py  # Visualization tools
 ├── tests/
-│   └── test_neural_network.py  # Test cases and examples
+│   ├── test_neural_network.py  # Tests for NumPy implementation
+│   └── test_pure_neural.py     # Tests for pure implementation
 ├── requirements.txt
 └── README.md
-```
-
-## Installation
-
-1. Clone this repository
-2. Install the required dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-Here's a simple example of how to use neural.py:
-
-```python
-from src.neural import NeuralNetwork
-from src.visualization import plot_training_progress, plot_network_architecture
-import numpy as np
-
-# Create training data
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])  # Input data
-y = np.array([[0], [1], [1], [0]])  # Target data
-
-# Create neural network with default sigmoid activation
-nn_sigmoid = NeuralNetwork([2, 4, 1], learning_rate=0.1)
-
-# Create neural network with ReLU activation
-nn_relu = NeuralNetwork([2, 4, 1], learning_rate=0.1, use_relu=True)
-
-# Create neural network with Leaky ReLU activation
-nn_leaky_relu = NeuralNetwork([2, 4, 1], learning_rate=0.1, use_leaky_relu=True, leaky_relu_alpha=0.01)
-
-# Visualize network architecture
-plot_network_architecture([2, 4, 1])
-
-# Train the network
-losses = nn_sigmoid.train(X, y, epochs=10000, batch_size=2)
-
-# Plot training progress
-plot_training_progress(losses)
-
-# Make predictions
-predictions = nn_sigmoid.predict(X)
-```
-
-## Activation Functions
-
-neural.py supports multiple activation functions:
-
-### Sigmoid (Default)
-```python
-nn = NeuralNetwork([2, 4, 1])  # Uses sigmoid by default
-```
-
-### ReLU (Rectified Linear Unit)
-```python
-nn = NeuralNetwork([2, 4, 1], use_relu=True)
-```
-
-### Leaky ReLU
-```python
-nn = NeuralNetwork([2, 4, 1], use_leaky_relu=True, leaky_relu_alpha=0.01)
 ```
 
 ## Testing
@@ -103,27 +64,20 @@ Run the test file to see examples of neural.py in action:
 python tests/test_neural_network.py
 ```
 
-The test file includes examples with different activation functions:
-1. XOR problem (with Sigmoid, ReLU, and Leaky ReLU)
-2. Simple digit recognition (0 and 1) with different activation functions
+Or test the pure implementation:
 
-Each test demonstrates various visualization capabilities:
-- Network architecture visualization
-- Training progress plots
-- Weight distribution plots
-- Decision boundary plots (for 2D problems)
-- Confusion matrices (for classification tasks)
+```bash
+python tests/test_pure_neural.py
+```
 
 ## Parameters
 
 - `layer_sizes`: List of integers representing the number of neurons in each layer
-- `learning_rate`: Learning rate for gradient descent (default: 0.01)
+- `learning_rate`: Learning rate for gradient descent (default: 0.1)
 - `use_relu`: Whether to use ReLU activation function (default: False)
 - `use_leaky_relu`: Whether to use Leaky ReLU activation function (default: False)
-- `leaky_relu_alpha`: Slope for negative values in Leaky ReLU (default: 0.01)
-- `epochs`: Number of training epochs
-- `batch_size`: Size of mini-batches (optional, if None, uses full batch)
+- `leaky_relu_alpha`: Alpha parameter for Leaky ReLU (default: 0.01)
 
 ## License
 
-MIT License 
+MIT 

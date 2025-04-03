@@ -76,4 +76,5 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-# Add any project-specific files or directories to ignore here 
+# Add any project-specific files or directories to ignore here
+/api
