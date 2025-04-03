@@ -4,7 +4,8 @@ from .math_ops import (
     matrix_transpose, matrix_hadamard, matrix_scalar_multiply,
     matrix_sigmoid, matrix_relu, matrix_leaky_relu,
     matrix_random, sqrt, matrix_zeros, matrix_ones, matrix_eye,
-    matrix_reshape, matrix_concatenate, matrix_scalar_add, matrix_sum_axis
+    matrix_reshape, matrix_concatenate, matrix_scalar_add, matrix_sum_axis,
+    matrix_scalar_subtract
 )
 import random
 
@@ -13,15 +14,17 @@ class PureNeuralNetwork:
         self,
         layer_sizes: List[int],
         learning_rate: float = 0.01,
-        use_relu: bool = False,
+        use_relu: bool = True,
         use_leaky_relu: bool = False,
-        leaky_relu_alpha: float = 0.01
+        leaky_relu_alpha: float = 0.01,
+        momentum: float = 0.9
     ):
         self.layer_sizes = layer_sizes
         self.learning_rate = learning_rate
         self.use_relu = use_relu
         self.use_leaky_relu = use_leaky_relu
         self.leaky_relu_alpha = leaky_relu_alpha
+        self.momentum = momentum
         
         if use_relu and use_leaky_relu:
             raise ValueError("Cannot use both ReLU and Leaky ReLU")
@@ -29,6 +32,8 @@ class PureNeuralNetwork:
         self.weights = []
         self.biases = []
         self.activations = []
+        self.velocity_w = []
+        self.velocity_b = []
         self.initialize_weights()
     
     def initialize_weights(self, initialization='he'):
@@ -40,6 +45,8 @@ class PureNeuralNetwork:
         """
         self.weights = []
         self.biases = []
+        self.velocity_w = []
+        self.velocity_b = []
         
         for i in range(len(self.layer_sizes) - 1):
             input_size = self.layer_sizes[i]
@@ -47,11 +54,11 @@ class PureNeuralNetwork:
             
             if initialization == 'he':
                 # He initialization: weights ~ N(0, sqrt(2/n))
-                scale = (2.0 / input_size) ** 0.5
+                scale = sqrt(2.0 / input_size)
                 weights = matrix_random(output_size, input_size, -scale, scale)
             elif initialization == 'xavier':
                 # Xavier initialization: weights ~ N(0, sqrt(1/n))
-                scale = (1.0 / input_size) ** 0.5
+                scale = sqrt(1.0 / input_size)
                 weights = matrix_random(output_size, input_size, -scale, scale)
             else:  # random initialization
                 weights = matrix_random(output_size, input_size, -1, 1)
@@ -59,8 +66,14 @@ class PureNeuralNetwork:
             # Initialize biases to small random values
             biases = matrix_random(output_size, 1, -0.1, 0.1)
             
+            # Initialize momentum velocities
+            velocity_w = matrix_zeros(output_size, input_size)
+            velocity_b = matrix_zeros(output_size, 1)
+            
             self.weights.append(weights)
             self.biases.append(biases)
+            self.velocity_w.append(velocity_w)
+            self.velocity_b.append(velocity_b)
     
     def forward(self, X: Matrix) -> Matrix:
         """
@@ -109,6 +122,28 @@ class PureNeuralNetwork:
         weight_gradients = []
         bias_gradients = []
         
+        # Store weighted sums for derivative computation
+        weighted_sums = []
+        current_activation = X
+        for i in range(len(self.weights)):
+            expanded_bias = Matrix(self.biases[i].rows, current_activation.cols)
+            for row in range(self.biases[i].rows):
+                for col in range(current_activation.cols):
+                    expanded_bias[row, col] = self.biases[i][row, 0]
+            
+            z = matrix_add(
+                matrix_multiply(self.weights[i], current_activation),
+                expanded_bias
+            )
+            weighted_sums.append(z)
+            
+            if self.use_relu:
+                current_activation = matrix_relu(z)
+            elif self.use_leaky_relu:
+                current_activation = matrix_leaky_relu(z, self.leaky_relu_alpha)
+            else:  # sigmoid
+                current_activation = matrix_sigmoid(z)
+        
         # Compute output layer error
         error = matrix_subtract(output, y)
         
@@ -120,19 +155,20 @@ class PureNeuralNetwork:
             else:  # hidden layers
                 # Compute derivative of activation function
                 if self.use_relu:
-                    activation_derivative = Matrix(self.activations[i+1].rows, self.activations[i+1].cols)
-                    for r in range(self.activations[i+1].rows):
-                        for c in range(self.activations[i+1].cols):
-                            activation_derivative[r, c] = 1.0 if self.activations[i+1][r, c] > 0 else 0.0
+                    activation_derivative = Matrix(weighted_sums[i].rows, weighted_sums[i].cols)
+                    for r in range(weighted_sums[i].rows):
+                        for c in range(weighted_sums[i].cols):
+                            activation_derivative[r, c] = 1.0 if weighted_sums[i][r, c] > 0 else 0.0
                 elif self.use_leaky_relu:
-                    activation_derivative = Matrix(self.activations[i+1].rows, self.activations[i+1].cols)
-                    for r in range(self.activations[i+1].rows):
-                        for c in range(self.activations[i+1].cols):
-                            activation_derivative[r, c] = 1.0 if self.activations[i+1][r, c] > 0 else self.leaky_relu_alpha
+                    activation_derivative = Matrix(weighted_sums[i].rows, weighted_sums[i].cols)
+                    for r in range(weighted_sums[i].rows):
+                        for c in range(weighted_sums[i].cols):
+                            activation_derivative[r, c] = 1.0 if weighted_sums[i][r, c] > 0 else self.leaky_relu_alpha
                 else:  # sigmoid
+                    activation = matrix_sigmoid(weighted_sums[i])
                     activation_derivative = matrix_hadamard(
-                        self.activations[i+1],
-                        matrix_scalar_subtract(matrix_ones(*self.activations[i+1].shape()), self.activations[i+1])
+                        activation,
+                        matrix_scalar_subtract(matrix_ones(*activation.shape()), activation)
                     )
                 
                 # Compute error for current layer
@@ -146,10 +182,10 @@ class PureNeuralNetwork:
                 delta,
                 matrix_transpose(self.activations[i])
             )
-            weight_grad = matrix_scalar_multiply(weight_grad, self.learning_rate / m)
+            weight_grad = matrix_scalar_multiply(weight_grad, 1.0 / m)  # Only normalize by batch size
             
             bias_grad = matrix_sum_axis(delta, axis=1)
-            bias_grad = matrix_scalar_multiply(bias_grad, self.learning_rate / m)
+            bias_grad = matrix_scalar_multiply(bias_grad, 1.0 / m)  # Only normalize by batch size
             
             weight_gradients.insert(0, weight_grad)
             bias_gradients.insert(0, bias_grad)
@@ -160,22 +196,33 @@ class PureNeuralNetwork:
     
     def update_parameters(self, weight_gradients, bias_gradients):
         """
-        Update network parameters using computed gradients
+        Update network parameters using computed gradients with momentum
         """
         for i in range(len(self.weights)):
-            self.weights[i] = matrix_subtract(self.weights[i], weight_gradients[i])
-            self.biases[i] = matrix_subtract(self.biases[i], bias_gradients[i])
+            # Update velocity with momentum
+            self.velocity_w[i] = matrix_add(
+                matrix_scalar_multiply(self.velocity_w[i], self.momentum),
+                matrix_scalar_multiply(weight_gradients[i], self.learning_rate)  # Apply learning rate here
+            )
+            self.velocity_b[i] = matrix_add(
+                matrix_scalar_multiply(self.velocity_b[i], self.momentum),
+                matrix_scalar_multiply(bias_gradients[i], self.learning_rate)  # Apply learning rate here
+            )
+            
+            # Update parameters using velocity
+            self.weights[i] = matrix_subtract(self.weights[i], self.velocity_w[i])
+            self.biases[i] = matrix_subtract(self.biases[i], self.velocity_b[i])
     
     def train(
         self,
-        X: List[List[float]],
-        y: List[List[float]],
+        X: Matrix,
+        y: Matrix,
         epochs: int = 1000,
         batch_size: int = None,
         verbose: bool = True
     ) -> List[float]:
         """
-        Train the network using gradient descent
+        Train the network using gradient descent with momentum
         Supports both full batch and mini-batch training
         """
         m = X.cols  # number of training examples
@@ -184,6 +231,12 @@ class PureNeuralNetwork:
             batch_size = m  # full batch training
         
         losses = []
+        best_loss = float('inf')
+        patience = 50  # Increased patience
+        patience_counter = 0
+        min_delta = 1e-6  # Smaller improvement threshold
+        best_weights = None
+        best_biases = None
         
         for epoch in range(epochs):
             total_loss = 0.0
@@ -231,11 +284,27 @@ class PureNeuralNetwork:
             
             # Compute average loss for the epoch
             avg_loss = total_loss / m
+            losses.append(avg_loss)
+            
+            # Early stopping with minimum improvement threshold
+            if avg_loss < best_loss - min_delta:
+                best_loss = avg_loss
+                patience_counter = 0
+                # Save best model
+                best_weights = [w.copy() for w in self.weights]
+                best_biases = [b.copy() for b in self.biases]
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch + 1}")
+                    # Restore best model
+                    self.weights = best_weights
+                    self.biases = best_biases
+                    break
             
             if verbose and (epoch + 1) % 100 == 0:
                 print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.6f}")
-            
-            losses.append(avg_loss)
         
         return losses
     
@@ -318,6 +387,7 @@ class PureNeuralNetwork:
             'use_relu': self.use_relu,
             'use_leaky_relu': self.use_leaky_relu,
             'leaky_relu_alpha': self.leaky_relu_alpha,
+            'momentum': self.momentum,
             'weights': [[[w for w in row] for row in weight.data] for weight in self.weights],
             'biases': [[[b for b in row] for row in bias.data] for bias in self.biases]
         }
@@ -340,7 +410,8 @@ class PureNeuralNetwork:
             data['learning_rate'],
             data['use_relu'],
             data['use_leaky_relu'],
-            data['leaky_relu_alpha']
+            data['leaky_relu_alpha'],
+            data['momentum']
         )
         
         network.weights = [Matrix(len(w), len(w[0]), w) for w in data['weights']]

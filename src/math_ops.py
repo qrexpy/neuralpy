@@ -117,46 +117,48 @@ def matrix_scalar_add(a: Matrix, scalar: float) -> Matrix:
             result[i, j] = a[i, j] + scalar
     return result
 
+def matrix_scalar_subtract(a: Matrix, scalar: float) -> Matrix:
+    """
+    Subtract a scalar from each element of a matrix
+    """
+    result = Matrix(a.rows, a.cols)
+    for i in range(a.rows):
+        for j in range(a.cols):
+            result[i, j] = a[i, j] - scalar
+    return result
+
 def matrix_sum_axis(a: Matrix, axis: int = None) -> Matrix:
     """
-    Sum elements along the specified axis.
-    If axis is None, sum all elements and return a 1x1 matrix.
+    Sum matrix elements along specified axis
+    axis: 0 for columns, 1 for rows, None for all elements
     """
     if axis is None:
-        return Matrix(1, 1, [[a.sum()]])
-    
-    if axis == 0:  # Sum along columns
-        result = Matrix(1, a.cols)
-        for j in range(a.cols):
-            sum_val = 0.0
-            for i in range(a.rows):
-                sum_val += a[i, j]
-            result[0, j] = sum_val
-        return result
-    
-    elif axis == 1:  # Sum along rows
-        result = Matrix(a.rows, 1)
-        for i in range(a.rows):
-            sum_val = 0.0
-            for j in range(a.cols):
-                sum_val += a[i, j]
-            result[i, 0] = sum_val
-        return result
-    
-    else:
-        raise ValueError("Axis must be 0, 1, or None")
+        # Sum all elements
+        total = sum(sum(row) for row in a.data)
+        return Matrix(1, 1, [[total]])
+    elif axis == 0:
+        # Sum along columns
+        sums = [sum(row[j] for row in a.data) for j in range(a.cols)]
+        return Matrix(1, a.cols, [sums])
+    else:  # axis == 1
+        # Sum along rows
+        sums = [[sum(row)] for row in a.data]
+        return Matrix(a.rows, 1, sums)
 
 def exp(x: float) -> float:
     """
-    Compute e^x using Taylor series approximation
+    Compute exponential using Taylor series
     """
+    if x > 100:
+        return float('inf')
+    if x < -100:
+        return 0.0
+    
     result = 1.0
     term = 1.0
-    for i in range(1, 100):  # 100 terms for good precision
+    for i in range(1, 20):  # 20 terms should be enough for good precision
         term *= x / i
         result += term
-        if abs(term) < 1e-10:  # Stop if term becomes very small
-            break
     return result
 
 def sigmoid(x: float) -> float:
@@ -211,12 +213,13 @@ def sqrt(x: float) -> float:
     if x == 0:
         return 0.0
     
+    # Initial guess
     guess = x / 2.0
-    for _ in range(50):  # 50 iterations should be enough for convergence
-        new_guess = (guess + x / guess) / 2.0
-        if abs(new_guess - guess) < 1e-10:
-            return new_guess
-        guess = new_guess
+    
+    # Newton's method iteration
+    for _ in range(10):  # 10 iterations should be enough for good precision
+        guess = (guess + x / guess) / 2.0
+    
     return guess
 
 def random_uniform(low: float, high: float) -> float:
@@ -246,7 +249,7 @@ def matrix_random(rows: int, cols: int, low: float, high: float) -> Matrix:
 
 def matrix_zeros(rows: int, cols: int) -> Matrix:
     """Create a matrix filled with zeros"""
-    return Matrix(rows, cols)
+    return Matrix(rows, cols, [[0.0 for _ in range(cols)] for _ in range(rows)])
 
 def matrix_ones(rows: int, cols: int) -> Matrix:
     """Create a matrix filled with ones"""
@@ -254,66 +257,38 @@ def matrix_ones(rows: int, cols: int) -> Matrix:
 
 def matrix_eye(size: int) -> Matrix:
     """Create an identity matrix of the given size"""
-    result = Matrix(size, size)
-    for i in range(size):
-        result[i, i] = 1.0
-    return result
+    data = [[1.0 if i == j else 0.0 for j in range(size)] for i in range(size)]
+    return Matrix(size, size, data)
 
-def matrix_reshape(a: Matrix, rows: int, cols: int) -> Matrix:
-    """Reshape a matrix to the given dimensions"""
-    if a.rows * a.cols != rows * cols:
-        raise ValueError(f"Cannot reshape matrix of size {a.shape()} to ({rows}, {cols})")
+def matrix_reshape(a: Matrix, new_rows: int, new_cols: int) -> Matrix:
+    """
+    Reshape matrix to new dimensions
+    """
+    if a.rows * a.cols != new_rows * new_cols:
+        raise ValueError("New dimensions must have same total size as original matrix")
     
-    result = Matrix(rows, cols)
-    flat_data = [a[i, j] for i in range(a.rows) for j in range(a.cols)]
+    # Flatten the matrix
+    flat_data = [val for row in a.data for val in row]
     
-    for i in range(rows):
-        for j in range(cols):
-            result[i, j] = flat_data[i * cols + j]
+    # Reshape to new dimensions
+    new_data = []
+    for i in range(new_rows):
+        new_data.append(flat_data[i * new_cols:(i + 1) * new_cols])
     
-    return result
+    return Matrix(new_rows, new_cols, new_data)
 
 def matrix_concatenate(a: Matrix, b: Matrix, axis: int = 0) -> Matrix:
     """
-    Concatenate two matrices along the specified axis.
-    axis=0 means concatenate vertically (stacking rows)
-    axis=1 means concatenate horizontally (stacking columns)
+    Concatenate two matrices along specified axis
+    axis: 0 for vertical concatenation, 1 for horizontal
     """
     if axis == 0:
         if a.cols != b.cols:
-            raise ValueError(f"Cannot concatenate matrices with different column counts: {a.shape()} and {b.shape()}")
-        
-        result = Matrix(a.rows + b.rows, a.cols)
-        
-        # Copy first matrix
-        for i in range(a.rows):
-            for j in range(a.cols):
-                result[i, j] = a[i, j]
-        
-        # Copy second matrix
-        for i in range(b.rows):
-            for j in range(b.cols):
-                result[i + a.rows, j] = b[i, j]
-        
-        return result
-    
-    elif axis == 1:
-        if a.rows != b.rows:
-            raise ValueError(f"Cannot concatenate matrices with different row counts: {a.shape()} and {b.shape()}")
-        
-        result = Matrix(a.rows, a.cols + b.cols)
-        
-        # Copy first matrix
-        for i in range(a.rows):
-            for j in range(a.cols):
-                result[i, j] = a[i, j]
-        
-        # Copy second matrix
-        for i in range(b.rows):
-            for j in range(b.cols):
-                result[i, j + a.cols] = b[i, j]
-        
-        return result
-    
+            raise ValueError("Matrices must have same number of columns for vertical concatenation")
+        new_data = a.data + b.data
+        return Matrix(a.rows + b.rows, a.cols, new_data)
     else:
-        raise ValueError("Axis must be 0 or 1") 
+        if a.rows != b.rows:
+            raise ValueError("Matrices must have same number of rows for horizontal concatenation")
+        new_data = [row_a + row_b for row_a, row_b in zip(a.data, b.data)]
+        return Matrix(a.rows, a.cols + b.cols, new_data) 

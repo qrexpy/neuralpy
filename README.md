@@ -58,16 +58,22 @@ predictions = nn.predict(X)
 
 ## Testing
 
-Run the test file to see examples of neural.py in action:
+Run the interactive test suite to choose which models and tests to run:
 
 ```bash
-python tests/test_neural_network.py
+python tests/run_tests.py
 ```
 
-Or test the pure implementation:
+This will present you with a menu to:
+- Choose which models to test (Pure Python, NumPy, or both)
+- Select which tests to run (XOR, Digit Recognition, or both)
+- Configure test parameters (samples, epochs, batch size)
+
+Or run specific test files directly:
 
 ```bash
-python tests/test_pure_neural.py
+python tests/test_neural_network.py  # Test NumPy implementation
+python tests/test_pure_neural.py     # Test pure implementation
 ```
 
 ## Parameters
