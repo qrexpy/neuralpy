@@ -18,7 +18,7 @@ A neural network implementation built entirely from scratch in Python, with no d
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/neural.py.git
+git clone https://github.com/qrexpy/neuralpy.git
 cd neural.py
 pip install -r requirements.txt
 ```
