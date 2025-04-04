@@ -1,111 +1,139 @@
-# Visualization Tools in neural.py
+# Seeing is Believing: Visualization Tools
 
-This document provides detailed information about the visualization tools available in neural.py.
+Ever wondered what's happening inside your neural network? neural.py comes with powerful visualization tools that let you peek under the hood and understand how your network learns and makes decisions.
 
-## Available Visualization Functions
+## Your Visualization Toolkit
 
-### plot_training_progress
+### Training Progress: Watch Your Network Learn
 
-Plots the training loss over epochs to visualize the learning process.
-
-**Function:**
 ```python
 plot_training_progress(losses, title="Training Progress")
 ```
 
+This creates a beautiful graph showing how your network's error decreases over time. It's like watching your network get smarter before your eyes!
+
 **Parameters:**
-- `losses`: List of loss values for each epoch
-- `title`: Title for the plot (default: "Training Progress")
+- `losses`: A list of error values from each training epoch
+- `title`: What to call your graph (default: "Training Progress")
+
+**What You'll See:**
+A line chart with epochs on the x-axis and loss value on the y-axis, described by the equation:
+
+$$Loss(epoch) = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2$$
+
+Where $$\hat{y}_i$$ is your network's prediction.
 
 **Example:**
 ```python
 losses = nn.train(X, y, epochs=1000)
-plot_training_progress(losses, "XOR Training Progress")
+plot_training_progress(losses, "My Network Learning XOR")
 ```
 
-### plot_confusion_matrix
+### Confusion Matrix: Understand Your Network's Mistakes
 
-Plots a confusion matrix for classification tasks.
-
-**Function:**
 ```python
 plot_confusion_matrix(y_true, y_pred, title="Confusion Matrix")
 ```
 
+A color-coded grid showing which classes your network confuses with each other. Perfect for classification tasks!
+
 **Parameters:**
-- `y_true`: True labels
-- `y_pred`: Predicted labels
-- `title`: Title for the plot (default: "Confusion Matrix")
+- `y_true`: The correct labels
+- `y_pred`: Your network's predictions
+- `title`: The title for your visualization
+
+**What You'll See:**
+A heat map where each cell $$(i,j)$$ shows how many samples of true class $$i$$ were predicted as class $$j$$.
 
 **Example:**
 ```python
 predictions = nn.predict(X)
 y_pred = np.argmax(predictions, axis=1)
 y_true = np.argmax(y, axis=1)
-plot_confusion_matrix(y_true, y_pred, "Digit Recognition Confusion Matrix")
+plot_confusion_matrix(y_true, y_pred, "Digit Recognition Results")
 ```
 
-### plot_network_architecture
+### Network Architecture: Visualize Your Network's Structure
 
-Visualizes the architecture of the neural network.
-
-**Function:**
 ```python
 plot_network_architecture(layer_sizes, title="Neural Network Architecture")
 ```
 
+Creates a beautiful diagram of your network's layers and connections.
+
 **Parameters:**
-- `layer_sizes`: List of integers representing the number of neurons in each layer
-- `title`: Title for the plot (default: "Neural Network Architecture")
+- `layer_sizes`: List of neurons in each layer (e.g., [2, 4, 1])
+- `title`: What to name your visualization
+
+**What You'll See:**
+A network diagram with nodes representing neurons and connections showing how information flows between layers.
 
 **Example:**
 ```python
-plot_network_architecture([2, 4, 1], "XOR Network Architecture")
+plot_network_architecture([2, 4, 1], "XOR Network Structure")
 ```
 
-### plot_decision_boundary
+### Decision Boundary: See How Your Network Classifies
 
-Plots the decision boundary for 2D classification problems.
-
-**Function:**
 ```python
 plot_decision_boundary(model, X, y, title="Decision Boundary")
 ```
 
+This creates a colorful visualization of how your network divides the input space into different categories.
+
 **Parameters:**
-- `model`: Trained neural network model
-- `X`: Input data
-- `y`: Target data
-- `title`: Title for the plot (default: "Decision Boundary")
+- `model`: Your trained neural network
+- `X`: Input data points
+- `y`: True labels
+- `title`: Title for your visualization
+
+**What You'll See:**
+A 2D plot where different colors represent different decision regions, separated by the boundary line defined by:
+
+$$f(x_1, x_2) = W_2 \cdot \sigma(W_1 \cdot [x_1, x_2] + b_1) + b_2 = 0.5$$
+
+Where $$\sigma$$ is your activation function.
 
 **Example:**
 ```python
-plot_decision_boundary(nn, X, y.ravel(), "XOR Decision Boundary")
+plot_decision_boundary(nn, X, y, "XOR Decision Regions")
 ```
 
-### plot_weight_distribution
+### Weight Distribution: Analyze Your Network's Parameters
 
-Plots the distribution of weights in the neural network.
-
-**Function:**
 ```python
 plot_weight_distribution(model, title="Weight Distribution")
 ```
 
+This shows the distribution of weights in your network as a histogram.
+
 **Parameters:**
-- `model`: Trained neural network model
-- `title`: Title for the plot (default: "Weight Distribution")
+- `model`: Your trained neural network
+- `title`: What to title your visualization
+
+**What You'll See:**
+A histogram showing the distribution of weight values in your network, letting you check for potential issues like vanishing or exploding gradients.
 
 **Example:**
 ```python
-plot_weight_distribution(nn, "XOR Network Weight Distribution")
+plot_weight_distribution(nn, "Weight Distribution After Training")
+```
+
+## Making Customized Visualizations
+
+All visualization functions return matplotlib objects, so you can further customize them:
+
+```python
+plt = plot_training_progress(losses)
+plt.ylim(0, 0.5)  # Set y-axis limits
+plt.savefig("training_progress.png", dpi=300)  # Save high-resolution image
 ```
 
 ## Dependencies
 
-The visualization tools use the following libraries:
+These visualizations use:
 - matplotlib
 - seaborn
-- networkx (for network architecture visualization)
+- networkx (for the network architecture plots)
 
-These dependencies are included in the requirements.txt file. 
+All of these are included in the requirements.txt file, so you're ready to go! 

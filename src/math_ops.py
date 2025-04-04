@@ -1,3 +1,5 @@
+from typing import List
+
 class Matrix:
     def __init__(self, rows, cols, data=None):
         self.rows = rows
@@ -291,4 +293,48 @@ def matrix_concatenate(a: Matrix, b: Matrix, axis: int = 0) -> Matrix:
         if a.rows != b.rows:
             raise ValueError("Matrices must have same number of rows for horizontal concatenation")
         new_data = [row_a + row_b for row_a, row_b in zip(a.data, b.data)]
-        return Matrix(a.rows, a.cols + b.cols, new_data) 
+        return Matrix(a.rows, a.cols + b.cols, new_data)
+
+def matrix_split(a: Matrix, indices: List[int], axis: int = 0) -> List[Matrix]:
+    """
+    Split a matrix into multiple matrices along the specified axis.
+    
+    Args:
+        a: Input matrix to split
+        indices: List of indices where to split the matrix
+        axis: Axis along which to split (0 for rows, 1 for columns)
+    
+    Returns:
+        List of matrices after splitting
+    """
+    if not indices:
+        return [a]
+    
+    # Sort indices and remove duplicates
+    indices = sorted(list(set(indices)))
+    
+    # Validate indices
+    if axis == 0:
+        if any(i <= 0 or i >= a.rows for i in indices):
+            raise ValueError("Split indices must be between 0 and number of rows")
+    else:
+        if any(i <= 0 or i >= a.cols for i in indices):
+            raise ValueError("Split indices must be between 0 and number of columns")
+    
+    # Add start and end indices
+    indices = [0] + indices + [a.rows if axis == 0 else a.cols]
+    
+    # Split the matrix
+    result = []
+    for i in range(len(indices) - 1):
+        if axis == 0:
+            # Split along rows
+            data = [a.data[j] for j in range(indices[i], indices[i + 1])]
+            result.append(Matrix(len(data), a.cols, data))
+        else:
+            # Split along columns
+            data = [[a.data[j][k] for k in range(indices[i], indices[i + 1])] 
+                   for j in range(a.rows)]
+            result.append(Matrix(a.rows, len(data[0]), data))
+    
+    return result 

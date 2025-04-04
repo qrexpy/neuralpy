@@ -11,6 +11,7 @@ A neural network implementation built entirely from scratch in Python, with no d
 - **Random Number Generation**: Linear congruential generator
 - **Visualization Tools**: Network architecture, training progress, and more
 - **Comprehensive Tests**: XOR problem and digit recognition examples
+- **Interactive Examples**: Real-world applications including a learning Tic Tac Toe agent
 
 > [!NOTE]
 > The NumPy implementation (`neural.py`) is 15-100x faster than the pure Python implementation (`pure_neural.py`) according to benchmark tests. The pure implementation is provided for educational purposes to understand the underlying mathematics.
@@ -52,6 +53,9 @@ predictions = nn.predict(X)
 ├── tests/
 │   ├── test_neural_network.py  # Tests for NumPy implementation
 │   └── test_pure_neural.py     # Tests for pure implementation
+├── examples/
+│   ├── tic_tac_toe/      # Tic Tac Toe game with reinforcement learning
+│   └── run_examples.py   # Script to run all examples
 ├── requirements.txt
 └── README.md
 ```
@@ -74,6 +78,24 @@ Or run specific test files directly:
 ```bash
 python tests/test_neural_network.py  # Test NumPy implementation
 python tests/test_pure_neural.py     # Test pure implementation
+```
+
+## Examples
+
+The project includes interactive examples that demonstrate the neural network in practical applications.
+
+For detailed documentation about the examples and how to use them, see [EXAMPLES.md](EXAMPLES.md).
+
+Run any example using the examples runner:
+
+```bash
+python examples/run_examples.py
+```
+
+Or run a specific example directly:
+
+```bash
+python examples/tic_tac_toe/game.py
 ```
 
 ## Parameters

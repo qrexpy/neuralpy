@@ -1,13 +1,15 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 from .math_ops import (
     Matrix, matrix_multiply, matrix_add, matrix_subtract,
     matrix_transpose, matrix_hadamard, matrix_scalar_multiply,
     matrix_sigmoid, matrix_relu, matrix_leaky_relu,
     matrix_random, sqrt, matrix_zeros, matrix_ones, matrix_eye,
     matrix_reshape, matrix_concatenate, matrix_scalar_add, matrix_sum_axis,
-    matrix_scalar_subtract
+    matrix_scalar_subtract, matrix_split
 )
 import random
+import multiprocessing as mp
+from functools import partial
 
 class PureNeuralNetwork:
     def __init__(
@@ -17,7 +19,9 @@ class PureNeuralNetwork:
         use_relu: bool = True,
         use_leaky_relu: bool = False,
         leaky_relu_alpha: float = 0.01,
-        momentum: float = 0.9
+        momentum: float = 0.9,
+        weight_init: str = 'he',
+        num_workers: int = None
     ):
         self.layer_sizes = layer_sizes
         self.learning_rate = learning_rate
@@ -25,6 +29,8 @@ class PureNeuralNetwork:
         self.use_leaky_relu = use_leaky_relu
         self.leaky_relu_alpha = leaky_relu_alpha
         self.momentum = momentum
+        self.weight_init = weight_init
+        self.num_workers = num_workers or mp.cpu_count()
         
         if use_relu and use_leaky_relu:
             raise ValueError("Cannot use both ReLU and Leaky ReLU")
@@ -213,6 +219,68 @@ class PureNeuralNetwork:
             self.weights[i] = matrix_subtract(self.weights[i], self.velocity_w[i])
             self.biases[i] = matrix_subtract(self.biases[i], self.velocity_b[i])
     
+    def _process_batch(self, batch_data: Tuple[Matrix, Matrix]) -> Tuple[Matrix, Matrix, float]:
+        """Process a single batch in parallel"""
+        X_batch, y_batch = batch_data
+        
+        # Forward pass
+        output = self.forward(X_batch)
+        
+        # Compute loss
+        loss = matrix_sum_axis(
+            matrix_hadamard(
+                matrix_subtract(output, y_batch),
+                matrix_subtract(output, y_batch)
+            )
+        )[0, 0] / (2 * X_batch.cols)
+        
+        # Backward pass
+        weight_gradients, bias_gradients = self.backward(X_batch, y_batch, output)
+        
+        return weight_gradients, bias_gradients, loss
+    
+    def _prepare_batches(self, X: Matrix, y: Matrix, batch_size: int) -> List[Tuple[Matrix, Matrix]]:
+        """Prepare batches for parallel processing"""
+        m = X.cols
+        batches = []
+        
+        # Shuffle data
+        indices = list(range(m))
+        random.shuffle(indices)
+        
+        # Create shuffled matrices
+        X_shuffled = Matrix(X.rows, X.cols)
+        y_shuffled = Matrix(y.rows, y.cols)
+        
+        # Fill shuffled matrices
+        for i in range(m):
+            for r in range(X.rows):
+                X_shuffled[r, i] = X[r, indices[i]]
+            for r in range(y.rows):
+                y_shuffled[r, i] = y[r, indices[i]]
+        
+        # Split into batches
+        num_batches = (m + batch_size - 1) // batch_size  # Ceiling division
+        for i in range(num_batches):
+            start_idx = i * batch_size
+            end_idx = min(start_idx + batch_size, m)
+            batch_size_i = end_idx - start_idx
+            
+            # Create batch matrices
+            X_batch = Matrix(X.rows, batch_size_i)
+            y_batch = Matrix(y.rows, batch_size_i)
+            
+            # Fill batch matrices
+            for j in range(batch_size_i):
+                for r in range(X.rows):
+                    X_batch[r, j] = X_shuffled[r, start_idx + j]
+                for r in range(y.rows):
+                    y_batch[r, j] = y_shuffled[r, start_idx + j]
+            
+            batches.append((X_batch, y_batch))
+        
+        return batches
+    
     def train(
         self,
         X: Matrix,
@@ -222,89 +290,57 @@ class PureNeuralNetwork:
         verbose: bool = True
     ) -> List[float]:
         """
-        Train the network using gradient descent with momentum
-        Supports both full batch and mini-batch training
+        Train the network using parallel batch processing
         """
-        m = X.cols  # number of training examples
-        
+        m = X.cols
         if batch_size is None:
-            batch_size = m  # full batch training
+            batch_size = m
         
         losses = []
         best_loss = float('inf')
-        patience = 50  # Increased patience
+        patience = 50
         patience_counter = 0
-        min_delta = 1e-6  # Smaller improvement threshold
+        min_delta = 1e-6
         best_weights = None
         best_biases = None
         
-        for epoch in range(epochs):
-            total_loss = 0.0
-            
-            # Shuffle training data
-            indices = list(range(m))
-            random.shuffle(indices)
-            X_shuffled = Matrix(X.rows, X.cols)
-            y_shuffled = Matrix(y.rows, y.cols)
-            for i, idx in enumerate(indices):
-                for r in range(X.rows):
-                    X_shuffled[r, i] = X[r, idx]
-                for r in range(y.rows):
-                    y_shuffled[r, i] = y[r, idx]
-            
-            # Process mini-batches
-            for i in range(0, m, batch_size):
-                end_idx = min(i + batch_size, m)
-                X_batch = Matrix(X.rows, end_idx - i)
-                y_batch = Matrix(y.rows, end_idx - i)
+        # Create a pool of workers
+        with mp.Pool(processes=self.num_workers) as pool:
+            for epoch in range(epochs):
+                total_loss = 0.0
                 
-                for j in range(end_idx - i):
-                    for r in range(X.rows):
-                        X_batch[r, j] = X_shuffled[r, i + j]
-                    for r in range(y.rows):
-                        y_batch[r, j] = y_shuffled[r, i + j]
+                # Prepare batches for parallel processing
+                batches = self._prepare_batches(X, y, batch_size)
                 
-                # Forward pass
-                output = self.forward(X_batch)
+                # Process batches in parallel
+                results = pool.map(self._process_batch, batches)
                 
-                # Compute loss
-                loss = matrix_sum_axis(
-                    matrix_hadamard(
-                        matrix_subtract(output, y_batch),
-                        matrix_subtract(output, y_batch)
-                    )
-                )[0, 0] / (2 * (end_idx - i))
-                total_loss += loss * (end_idx - i)
+                # Aggregate results
+                for weight_gradients, bias_gradients, loss in results:
+                    total_loss += loss * batch_size
+                    self.update_parameters(weight_gradients, bias_gradients)
                 
-                # Backward pass
-                weight_gradients, bias_gradients = self.backward(X_batch, y_batch, output)
+                # Compute average loss
+                avg_loss = total_loss / m
+                losses.append(avg_loss)
                 
-                # Update parameters
-                self.update_parameters(weight_gradients, bias_gradients)
-            
-            # Compute average loss for the epoch
-            avg_loss = total_loss / m
-            losses.append(avg_loss)
-            
-            # Early stopping with minimum improvement threshold
-            if avg_loss < best_loss - min_delta:
-                best_loss = avg_loss
-                patience_counter = 0
-                # Save best model
-                best_weights = [w.copy() for w in self.weights]
-                best_biases = [b.copy() for b in self.biases]
-            else:
-                patience_counter += 1
-                if patience_counter >= patience:
-                    if verbose:
-                        print(f"Early stopping at epoch {epoch + 1}")
-                    # Restore best model
-                    self.weights = best_weights
-                    self.biases = best_biases
-                    break
-            
-            if verbose and (epoch + 1) % 100 == 0:
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.6f}")
+                # Early stopping check
+                if avg_loss < best_loss - min_delta:
+                    best_loss = avg_loss
+                    patience_counter = 0
+                    best_weights = [w.copy() for w in self.weights]
+                    best_biases = [b.copy() for b in self.biases]
+                else:
+                    patience_counter += 1
+                    if patience_counter >= patience:
+                        if verbose:
+                            print(f"Early stopping at epoch {epoch + 1}")
+                        self.weights = best_weights
+                        self.biases = best_biases
+                        break
+                
+                if verbose and (epoch + 1) % 100 == 0:
+                    print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.6f}")
         
         return losses
     
@@ -411,7 +447,9 @@ class PureNeuralNetwork:
             data['use_relu'],
             data['use_leaky_relu'],
             data['leaky_relu_alpha'],
-            data['momentum']
+            data['momentum'],
+            data['weight_init'],
+            data['num_workers']
         )
         
         network.weights = [Matrix(len(w), len(w[0]), w) for w in data['weights']]

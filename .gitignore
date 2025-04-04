@@ -78,3 +78,10 @@ Thumbs.db
 # Project specific
 # Add any project-specific files or directories to ignore here
 /api
+performance_comparison.png
+/tests/log
+
+# Tic-Tac-Toe example user files
+examples/tic_tac_toe/agent_data.json
+examples/tic_tac_toe/agent_data_*.json
+examples/tic_tac_toe/__pycache__/

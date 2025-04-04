@@ -1,176 +1,98 @@
-# Examples for neural.py
+# Putting Neural Networks to Work: Practical Examples
 
-This document provides examples of how to use neural.py for different tasks.
+Ready to see what your neural networks can actually do? This guide walks you through real-world examples that demonstrate how to apply neural.py to solve practical problems.
 
-## XOR Problem
+## How to Run the Examples
 
-The XOR (exclusive OR) problem is a classic example for neural networks. It requires the network to learn a non-linear decision boundary.
+Getting started with the examples is easy:
 
-```python
-import numpy as np
-from src.neural import NeuralNetwork
-from src.visualization import (
-    plot_training_progress,
-    plot_network_architecture,
-    plot_decision_boundary,
-    plot_weight_distribution
-)
+```bash
+# Run a specific example
+python examples/run_examples.py tic_tac_toe
 
-# Create XOR training data
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y = np.array([[0], [1], [1], [0]])
+# See what examples are available
+python examples/run_examples.py --list
 
-# Create neural network with sigmoid activation
-nn_sigmoid = NeuralNetwork([2, 4, 1], learning_rate=0.1)
-
-# Visualize network architecture
-plot_network_architecture([2, 4, 1], "XOR Network Architecture (Sigmoid)")
-
-# Train the network
-losses = nn_sigmoid.train(X, y, epochs=10000)
-
-# Plot training progress
-plot_training_progress(losses, "XOR Training Progress (Sigmoid)")
-
-# Plot weight distribution
-plot_weight_distribution(nn_sigmoid, "XOR Network Weight Distribution (Sigmoid)")
-
-# Make predictions
-predictions = nn_sigmoid.predict(X)
-print("\nXOR Test Results (Sigmoid):")
-for i in range(len(X)):
-    print(f"Input: {X[i]}, Expected: {y[i][0]}, Predicted: {predictions[i][0]:.4f}")
-
-# Plot decision boundary
-plot_decision_boundary(nn_sigmoid, X, y.ravel(), "XOR Decision Boundary (Sigmoid)")
-
-# Now try with ReLU activation
-nn_relu = NeuralNetwork([2, 4, 1], learning_rate=0.1, use_relu=True)
-
-# Train the network
-losses_relu = nn_relu.train(X, y, epochs=10000)
-
-# Plot training progress
-plot_training_progress(losses_relu, "XOR Training Progress (ReLU)")
-
-# Make predictions
-predictions_relu = nn_relu.predict(X)
-print("\nXOR Test Results (ReLU):")
-for i in range(len(X)):
-    print(f"Input: {X[i]}, Expected: {y[i][0]}, Predicted: {predictions_relu[i][0]:.4f}")
-
-# Plot decision boundary
-plot_decision_boundary(nn_relu, X, y.ravel(), "XOR Decision Boundary (ReLU)")
+# Interactive mode - choose from a menu
+python examples/run_examples.py
 ```
 
-## Digit Recognition
+Or if you prefer to go straight to a particular example:
 
-This example demonstrates how to use neural.py for a simple digit recognition task (recognizing digits 0 and 1).
-
-```python
-import numpy as np
-from src.neural import NeuralNetwork
-from src.visualization import (
-    plot_training_progress,
-    plot_confusion_matrix,
-    plot_network_architecture,
-    plot_weight_distribution
-)
-
-# Create a small dataset of 7x5 pixel digits (0 and 1)
-# 0: 1 1 1 1 1
-#    1 0 0 0 1
-#    1 0 0 0 1
-#    1 0 0 0 1
-#    1 0 0 0 1
-#    1 0 0 0 1
-#    1 1 1 1 1
-
-# 1: 0 0 0 0 1
-#    0 0 0 1 1
-#    0 0 1 0 1
-#    0 0 0 0 1
-#    0 0 0 0 1
-#    0 0 0 0 1
-#    0 0 0 0 1
-
-digit_0 = np.array([1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1])
-digit_1 = np.array([0,0,0,0,1, 0,0,0,1,1, 0,0,1,0,1, 0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1, 0,0,0,0,1])
-
-X = np.array([digit_0, digit_1])
-y = np.array([[1, 0], [0, 1]])  # One-hot encoding
-
-# Create neural network with 35 input neurons (7x5 pixels), 10 hidden neurons, and 2 output neurons
-nn = NeuralNetwork([35, 10, 2], learning_rate=0.1)
-
-# Plot network architecture
-plot_network_architecture([35, 10, 2], "Digit Recognition Network Architecture")
-
-# Train the network
-losses = nn.train(X, y, epochs=5000)
-
-# Plot training progress
-plot_training_progress(losses, "Digit Recognition Training Progress")
-
-# Plot weight distribution
-plot_weight_distribution(nn, "Digit Recognition Network Weight Distribution")
-
-# Make predictions
-predictions = nn.predict(X)
-print("\nDigit Recognition Test Results:")
-for i in range(len(X)):
-    print(f"Input: Digit {i}")
-    print(f"Expected: {y[i]}")
-    print(f"Predicted: {predictions[i]}")
-    print()
-
-# Plot confusion matrix
-y_pred = np.argmax(predictions, axis=1)
-y_true = np.argmax(y, axis=1)
-plot_confusion_matrix(y_true, y_pred, "Digit Recognition Confusion Matrix")
+```bash
+python examples/tic_tac_toe/game.py
 ```
 
-## Multi-class Classification
+## Tic Tac Toe with AI: Learn by Playing
 
-This example shows how to use neural.py for a multi-class classification problem.
+Ever wanted to create an AI that learns from experience? The Tic Tac Toe example shows you how to build an agent that gets smarter the more you play against it.
 
-```python
-import numpy as np
-from src.neural import NeuralNetwork
-from src.visualization import plot_training_progress, plot_confusion_matrix
+### What Makes This Example Special
 
-# Create a simple dataset for multi-class classification
-# 3 classes, 2 features
-X = np.array([
-    [0, 0], [0, 1], [1, 0], [1, 1],  # Class 0
-    [2, 2], [2, 3], [3, 2], [3, 3],  # Class 1
-    [0, 3], [1, 3], [3, 0], [3, 1]   # Class 2
-])
-y = np.array([
-    [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0],  # Class 0
-    [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0],  # Class 1
-    [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]   # Class 2
-])
+- **Interactive Gameplay**: A clean, intuitive GUI built with tkinter
+- **Learning in Real-Time**: Watch as the AI improves its strategy with each game
+- **Reinforcement Learning**: The AI learns which moves lead to victory using the reward function:
+  $$R(s,a) = \begin{cases}
+  1.0 & \text{if move leads to winning} \\
+  0.5 & \text{if move leads to a draw} \\
+  0.0 & \text{if move leads to losing}
+  \end{cases}$$
+- **Smart Strategy**: Combines neural network evaluation with game-specific rules
 
-# Create neural network with 2 input neurons, 6 hidden neurons, and 3 output neurons
-nn = NeuralNetwork([2, 6, 3], learning_rate=0.1)
+### Jump Right In
 
-# Train the network
-losses = nn.train(X, y, epochs=5000)
+1. Start the game:
+   ```
+   python examples/tic_tac_toe/game.py
+   ```
+2. Click any empty square to place your X
+3. Watch the AI respond with O
+4. Try to outsmart it - but beware, it learns from its mistakes!
 
-# Plot training progress
-plot_training_progress(losses, "Multi-class Classification Training Progress")
+### Training Your AI Champion
 
-# Make predictions
-predictions = nn.predict(X)
-y_pred = np.argmax(predictions, axis=1)
-y_true = np.argmax(y, axis=1)
+Want a tougher opponent? You've got options:
 
-# Plot confusion matrix
-plot_confusion_matrix(y_true, y_pred, "Multi-class Classification Confusion Matrix")
+- **Quick Training**: Click the "Train AI (100 games)" button in the game
+- **Deep Training**: Run the dedicated training script:
+  ```
+  python examples/tic_tac_toe/train_ai.py
+  ```
+- **Advanced Strategy**: Create a pre-configured smart model:
+  ```
+  python examples/tic_tac_toe/create_smart_model.py
+  ```
 
-# Print results
-print("\nMulti-class Classification Test Results:")
-for i in range(len(X)):
-    print(f"Input: {X[i]}, Expected: Class {y_true[i]}, Predicted: Class {y_pred[i]}")
-``` 
+### Behind the Scenes
+
+The AI uses a neural network architecture of 9-27-9 (input, hidden, output). For those interested in the math:
+
+1. **State Representation**: The game board is flattened into a vector $$s \in \{-1,0,1\}^9$$ where:
+   - 1 represents X (player)
+   - -1 represents O (AI)
+   - 0 represents empty squares
+
+2. **Decision Making**: The AI combines:
+   - Neural network evaluation: $$Q(s,a) = f(W_2 \cdot \text{ReLU}(W_1 \cdot s + b_1) + b_2)$$
+   - Strategic rules for critical positions
+   - Exploration vs. exploitation with probability $$\epsilon$$ (exploration rate)
+
+3. **Learning Process**: The AI updates its neural network weights using:
+   - Temporal difference learning
+   - Mini-batch gradient descent
+   - Experience replay for better generalization
+
+## Create Your Own Example
+
+Inspired to build your own neural network application? Follow these steps:
+
+1. Create a new directory: `examples/your_example_name/`
+2. Add an `__init__.py` file to make it a proper package
+3. Create your main script (e.g., `main.py`)
+4. Add a README.md explaining what your example does
+
+The best examples demonstrate a practical application of neural networks while being accessible to newcomers.
+
+## Requirements
+
+Each example may have different requirements, but all examples use the neural network implementations from the main project. Make sure you have the necessary dependencies installed. 
