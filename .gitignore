@@ -80,6 +80,8 @@ Thumbs.db
 /api
 performance_comparison.png
 /tests/log
+network_*.png
+training_*.png
 
 # Tic-Tac-Toe example user files
 examples/tic_tac_toe/agent_data.json

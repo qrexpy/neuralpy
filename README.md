@@ -81,5 +81,5 @@ python examples/tic_tac_toe/game.py
 For more examples, see the `examples/` folder.
 
 ## License
-
 This project is licensed under the MIT License.
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
