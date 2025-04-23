@@ -312,13 +312,20 @@ class PureNeuralNetwork:
                 # Prepare batches for parallel processing
                 batches = self._prepare_batches(X, y, batch_size)
                 
-                # Process batches in parallel
-                results = pool.map(self._process_batch, batches)
-                
-                # Aggregate results
+                try:
+                    results = pool.map(self._process_batch, batches, timeout=300)  # Add timeout to prevent hanging
+                except mp.TimeoutError:
+                    print("Batch processing timed out. Consider reducing dataset size or increasing timeout.")
+                    pool.terminate()
+                    pool.join()
+                    raise
+
                 for weight_gradients, bias_gradients, loss in results:
                     total_loss += loss * batch_size
                     self.update_parameters(weight_gradients, bias_gradients)
+
+                # Log progress for debugging
+                print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss / m:.6f}")
                 
                 # Compute average loss
                 avg_loss = total_loss / m
@@ -455,4 +462,4 @@ class PureNeuralNetwork:
         network.weights = [Matrix(len(w), len(w[0]), w) for w in data['weights']]
         network.biases = [Matrix(len(b), len(b[0]), b) for b in data['biases']]
         
-        return network 
+        return network
