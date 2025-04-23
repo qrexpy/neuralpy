@@ -23,6 +23,10 @@ def list_examples():
             elif os.path.exists(os.path.join(os.path.dirname(__file__), item, 'main.py')):
                 examples.append((item, 'main.py'))
     
+    # Add sentiment analysis example
+    if os.path.exists(os.path.join(os.path.dirname(__file__), 'sentiment_analysis', 'sentiment_analysis.py')):
+        examples.append(('sentiment_analysis', 'sentiment_analysis.py'))
+    
     return examples
 
 def run_example(example_name):
@@ -116,4 +120,4 @@ def main():
             return 1
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())
