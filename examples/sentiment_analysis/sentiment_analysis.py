@@ -7,6 +7,7 @@ import numpy as np
 from src.neural import NeuralNetwork
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 import tkinter as tk
@@ -15,6 +16,14 @@ from tkinter import filedialog
 import os
 import pickle
 import pandas as pd
+import re
+
+# Preprocess text to clean and normalize it
+def preprocess_text(text):
+    text = text.lower()  # Convert to lowercase
+    text = re.sub(r'[^a-zA-Z\s]', '', text)  # Remove non-alphabetic characters
+    text = ' '.join(word for word in text.split() if word not in ENGLISH_STOP_WORDS)  # Remove stop words
+    return text
 
 # Sample dataset
 reviews = [
@@ -31,8 +40,11 @@ reviews = [
 ]
 labels = ["positive", "negative", "positive", "negative", "neutral", "positive", "negative", "positive", "negative", "positive"]
 
+# Apply preprocessing to reviews
+reviews = [preprocess_text(review) for review in reviews]
+
 # Preprocess data
-vectorizer = CountVectorizer(binary=True)
+vectorizer = CountVectorizer(binary=True, max_features=5000)  # Limit to top 5000 words
 X = vectorizer.fit_transform(reviews).toarray()
 label_encoder = LabelEncoder()
 y = label_encoder.fit_transform(labels)
@@ -76,38 +88,53 @@ def predict_sentiment():
     # Display the result
     result_label.config(text=f"Predicted Sentiment: {sentiment}")
 
-# Add functionality to correct predictions and separate train and save actions
+# Optimize correction process with batch updates
 
+# Accumulate corrections
+correction_buffer = []
+
+# Function to apply corrections in batches
+def apply_corrections():
+    global correction_buffer, X_train, y_train
+    if not correction_buffer:
+        messagebox.showinfo("Info", "No corrections to apply.")
+        return
+
+    # Process corrections
+    new_reviews, new_labels = zip(*correction_buffer)
+    new_X = vectorizer.transform(new_reviews).toarray()
+    new_y = ohe.transform([[label_encoder.transform([label])[0]] for label in new_labels])
+
+    # Ensure consistent shapes before appending
+    if new_X.shape[1] != X_train.shape[1]:
+        messagebox.showerror("Error", "Feature size mismatch. Ensure the vectorizer is consistent.")
+        return
+
+    if new_y.shape[1] != y_train.shape[1]:
+        messagebox.showerror("Error", "Label size mismatch. Ensure the label encoder is consistent.")
+        return
+
+    # Update training data
+    X_train = np.vstack([X_train, new_X])
+    y_train = np.vstack([y_train, new_y])
+
+    # Retrain the model
+    network.train(X_train, y_train, epochs=100, batch_size=4)
+
+    # Clear the buffer
+    correction_buffer = []
+    messagebox.showinfo("Info", "Corrections applied and model updated.")
+
+# Update the correction function to use the buffer
 def correct_prediction():
     correct_sentiment = correction_entry.get()
     if not correct_sentiment:
         messagebox.showerror("Error", "Please enter the correct sentiment.")
         return
 
-    # Update the dataset with the corrected sentiment
-    global reviews, labels, X, y, X_train, X_test, y_train, y_test
-    reviews.append(entry.get())
-    labels.append(correct_sentiment)
-
-    # Reprocess the data
-    X = vectorizer.fit_transform(reviews).toarray()
-    y = label_encoder.fit_transform(labels)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    y_train = ohe.fit_transform(y_train.reshape(-1, 1))
-    y_test = ohe.transform(y_test.reshape(-1, 1))
-
-    # Reinitialize the neural network with the updated input size
-    global network
-    input_size = X_train.shape[1]
-    output_size = y_train.shape[1]
-    network = NeuralNetwork(
-        layer_sizes=[input_size, 16, 8, output_size],
-        learning_rate=0.01,
-        use_relu=True,
-        momentum=0.9
-    )
-
-    messagebox.showinfo("Info", "Correct sentiment added to the dataset.")
+    # Add correction to the buffer
+    correction_buffer.append((preprocess_text(entry.get()), correct_sentiment))
+    messagebox.showinfo("Info", "Correction added to the buffer. Apply corrections to update the model.")
 
 # Function to save the model in the selected format
 def save_model():
@@ -146,6 +173,7 @@ def load_csv_dataset():
         labels = df['sentiment'].tolist()
 
         # Reprocess the data
+        reviews = [preprocess_text(review) for review in reviews]
         X = vectorizer.fit_transform(reviews).toarray()
         y = label_encoder.fit_transform(labels)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -166,6 +194,16 @@ def load_csv_dataset():
         messagebox.showinfo("Info", "Dataset loaded and processed successfully.")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to load dataset: {e}")
+
+# Add logging to debug predictions
+def debug_predictions():
+    predictions = network.predict(X_test)
+    predicted_labels = np.argmax(predictions, axis=1)
+    actual_labels = np.argmax(y_test, axis=1)
+
+    print("Predictions:", predicted_labels)
+    print("Actual Labels:", actual_labels)
+    print("Accuracy:", np.mean(predicted_labels == actual_labels))
 
 # Create the GUI
 root = tk.Tk()
@@ -210,5 +248,11 @@ save_button.grid(row=7, column=0, columnspan=2, pady=10)
 
 load_csv_button = tk.Button(frame, text="Load CSV Dataset", command=load_csv_dataset)
 load_csv_button.grid(row=8, column=0, columnspan=2, pady=10)
+
+debug_button = tk.Button(frame, text="Debug Predictions", command=debug_predictions)
+debug_button.grid(row=9, column=0, columnspan=2, pady=10)
+
+apply_corrections_button = tk.Button(frame, text="Apply Corrections", command=apply_corrections)
+apply_corrections_button.grid(row=10, column=0, columnspan=2, pady=10)
 
 root.mainloop()

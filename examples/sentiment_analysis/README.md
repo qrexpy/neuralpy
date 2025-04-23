@@ -63,3 +63,9 @@ pip install scikit-learn
 ## Notes
 
 - This example is for educational purposes and uses a small dataset. For real-world applications, use a larger and more diverse dataset.
+
+## Known Issues
+
+1. **Model Processing Issue**: There is an issue with the model processing where predictions may not be accurate or consistent. This requires further debugging and optimization.
+
+2. **Process Killed During Corrections**: Applying corrections to the model can sometimes kill the process due to high memory or CPU usage. This is being investigated and optimized.
