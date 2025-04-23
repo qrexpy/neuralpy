@@ -180,26 +180,26 @@ class NeuralNetworkTests(unittest.TestCase):
         """Test XOR problem with NumPy implementation"""
         X = np.array(self.xor_data['X'])
         y = np.array(self.xor_data['y'])
-        
+
         network = NeuralNetwork(
             [2, 32, 16, 1],  # Even wider network
-            learning_rate=0.1,  # Higher learning rate
-            use_relu=True,
+            learning_rate=0.05,  # Adjusted learning rate for better convergence
+            use_relu=False,  # Use Sigmoid instead of ReLU
             momentum=0.9
         )
-        
+
         # Plot network architecture before training
         plot_network_architecture(network.layer_sizes, title="NumPy Network Architecture")
-        
-        losses = network.train(X, y, epochs=10000, batch_size=4)  # More epochs
-        
+
+        losses = network.train(X, y, epochs=5000, batch_size=4)  # Increased epochs for better training
+
         # Plot training progress
         plot_training_progress(losses, title="NumPy Training Progress")
-        
+
         predictions = network.predict(X)
         accuracy = np.mean(np.round(predictions) == y)
         final_loss = np.mean(np.square(predictions - y)) / 2
-        
+
         self.assertGreater(accuracy, 0.95, "XOR accuracy should be above 95%")
         self.assertLess(final_loss, 0.1, "XOR loss should be below 0.1")
 
@@ -596,4 +596,4 @@ class NeuralNetworkTests(unittest.TestCase):
         sys.stdout.flush()
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()
